@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-camera-ffmpeg",
+  "name": "homebridge-c920-pi",
   "version": "0.1.1",
   "description": "ffmpeg plugin for homebridge: https://github.com/nfarina/homebridge",
   "license": "ISC",
@@ -8,10 +8,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/KhaosT/homebridge-camera-ffmpeg.git"
+    "url": "git://github.com/zllovesuki/homebridge-c920-pi.git"
   },
   "bugs": {
-    "url": "http://github.com/KhaosT/homebridge-camera-ffmpeg/issues"
+    "url": "http://github.com/zllovesuki/homebridge-c920-pi/issues"
   },
   "engines": {
     "node": ">=5.0.0",
