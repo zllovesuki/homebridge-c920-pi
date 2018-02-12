@@ -6,7 +6,11 @@ Refer to the [upstream](https://github.com/KhaosT/homebridge-camera-ffmpeg) for 
 
 Since multiple people are living in my house, I want the plugin to be able to handle multiple stream requests. Thus, we will have `v4l2rtspserver` grab the video feed, and stream it locally on RPi. Then, whenever users request for a live feed, it will request from the local live stream instead of taking control of the device.
 
-## compile: v4l2server
+## configure your RPi
+
+Since we are going to use GPU decoding/encoding extensively, make sure to configure your RPi to have 256MB available to GPU.
+
+## compile: v4l2rtspserver
 
 Follow [this guide](http://c.wensheng.org/2017/05/18/stream-from-raspberrypi/) and compile `v4l2rtspserver`.
 
