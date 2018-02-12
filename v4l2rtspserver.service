@@ -1,0 +1,16 @@
+[Unit]
+Description=Streaming Server
+Before=homebridge.service
+After=syslog.target network-online.target
+
+[Service]
+Type=simple
+User=pi
+ExecStartPre=/usr/bin/v4l2-ctl --set-fmt-video=width=1280,height=720,pixelformat=1 -d /dev/video0
+ExecStart=/usr/local/sbin/v4l2rtspserver -c -Q 512 -s -F 0 -H 720 -W 1280 -I 127.0.0.1 -P 8555 -A 32000 -C 2 /dev/video0,hw:1,0
+Restart=on-failure
+RestartSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

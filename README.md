@@ -2,6 +2,12 @@
 
 Refer to the [upstream](https://github.com/KhaosT/homebridge-camera-ffmpeg) for original instructions. This plugin is specifically optimized for C920 running on Raspberry Pi 3 Model B, preferably Raspian Stretch Lite.
 
+## multi stream
+
+Since in my house we have multiple people, I want the plugin to be able to handle multiple stream requests. Thus, we will have `v4l2rtspserver` grab the video feed, and stream it locally. Then, whenever users request for a live feed, it will grab from the local stream instead of taking control of the device.
+
+Follow [this guide](http://c.wensheng.org/2017/05/18/stream-from-raspberrypi/) and compile `v4l2rtspserver`.
+
 ## ffmpeg
 
 C920 has H264 compressed stream support, so we could technically decode and re-encode (all HW accelerated).
@@ -10,6 +16,7 @@ However, the default `ffmpeg` was not compiled with any of those support...
 
 1. Refers to [this link on SE](https://raspberrypi.stackexchange.com/a/70544) for `alsa` support, or else your stream will have no sound.
 2. Refers to [this link on Reddit](https://www.reddit.com/r/raspberry_pi/comments/5677qw/hardware_accelerated_x264_encoding_with_ffmpeg/) for `omx` and `mmal` support, or else your RPi will be on fire and disintegrate.
+3. You also need to include `--enable-network --enable-protocol=tcp --enable-demuxer=rtsp --enable-decoder=h264` when you are compiling or else you won't be able to use `rtsp` stream from `v4l2rtspserver` as an input.
 
 ## setup
 
@@ -17,18 +24,8 @@ For all intent and purposes, 720p stream is good enough. Load module `bcm2385-v4
 
 Then set the camera native resolution and stream format with `/usr/bin/v4l2-ctl --set-fmt-video=width=1280,height=720,pixelformat=1 -d /dev/video0`
 
+v4l2server: `v4l2rtspserver -c -Q 512 -s -F 0 -H 720 -W 1280 -P 8555 -A 32000 -C 2 /dev/video0,hw:1,0`
+
 ## configuration
 
-In `videoConfig`, we have a new format:
-
-```JSON
-"videoConfig": {
-    "videoSource": "/dev/video0",
-    "audioSource": "hw:1,0",
-    "stillImageSource": "-i http://faster_still_image_grab_url/this_is_optional.jpg",
-    "maxStreams": 2,
-    "maxWidth": 1280,
-    "maxHeight": 720,
-    "maxFPS": 30
-}
-```
+In `videoConfig`, point `source` to the `v4l2rtspserver`. ffmpeg should be able to demux.

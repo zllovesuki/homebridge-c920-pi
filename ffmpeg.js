@@ -20,12 +20,11 @@ function FFMPEG(hap, cameraConfig) {
     var ffmpegOpt = cameraConfig.videoConfig;
     this.name = cameraConfig.name;
 
-    if (!ffmpegOpt.videoSource) {
+    if (!ffmpegOpt.source) {
         throw new Error("Missing source for camera.");
     }
 
-    this.ffmpegVideoSource = ffmpegOpt.videoSource;
-    this.ffmpegAudioSource = ffmpegOpt.audioSource;
+    this.ffmpegSource = ffmpegOpt.source;
     this.ffmpegImageSource = ffmpegOpt.stillImageSource;
 
     this.services = [];
@@ -271,36 +270,28 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                 let audioKey = sessionInfo.audio_srtp;
                 let audioSsrc = sessionInfo.audio_ssrc;
 
-                let videoFfmpegCommand = '-thread_queue_size 512 -re -i ' + this.ffmpegVideoSource + ' -vcodec h264_omx -r ' +
-                    fps + ' -f h264_mmal -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' +
+                let ffmpegCommand = '-thread_queue_size 512 ' + this.ffmpegSource + ' -map 0:0 -vcodec h264_omx -r ' +
+                    fps + ' -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' +
                     bitrate + 'k -payload_type 99 -ssrc ' + videoSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
                     videoKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetVideoPort + '?rtcpport=' + targetVideoPort +
-                    '&localrtcpport=' + targetVideoPort + '&pkt_size=1378';
-                console.log(videoFfmpegCommand);
-                let audioFfmpegCommand = '-thread_queue_size 512 -ar 32000 -ac 2 -f alsa -i ' + this.ffmpegAudioSource + ' '+
-                    '-acodec libfdk_aac -profile:a aac_eld -flags +global_header -f null -b:a 24k -r:a 16000 -bufsize 48k -ac 1 ' +
+                    '&localrtcpport=' + targetVideoPort + '&pkt_size=1378 ' + 
+                    '-map 0:1 -acodec libfdk_aac -profile:a aac_eld -flags +global_header -f null -b:a 24k -r:a 16000 -bufsize 48k -ac 1 ' +
                     '-payload_type 110 -ssrc ' + audioSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
                     audioKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetAudioPort + '?rtcpport=' + targetAudioPort +
                     '&localrtcpport=' + targetAudioPort;
-                console.log(audioFfmpegCommand)
-                let videoFfmpeg = spawn('ffmpeg', videoFfmpegCommand.split(' '), {
+
+                console.log(ffmpegCommand)
+                let ffmpeg = spawn('ffmpeg', ffmpegCommand.split(' '), {
                     env: process.env
                 });
-                let audioFfmpeg = spawn('ffmpeg', audioFfmpegCommand.split(' '), {
-                    env: process.env
-                });
-                this.ongoingSessions[sessionIdentifier] = {
-                    video: videoFfmpeg,
-                    audio: audioFfmpeg
-                };
+                this.ongoingSessions[sessionIdentifier] = ffmpeg;
             }
 
             delete this.pendingSessions[sessionIdentifier];
         } else if (requestType == "stop") {
             var ffmpegProcess = this.ongoingSessions[sessionIdentifier];
             if (ffmpegProcess) {
-                ffmpegProcess.video.kill('SIGKILL');
-                ffmpegProcess.audio.kill('SIGKILL');
+                ffmpegProcess.kill('SIGKILL');
             }
 
             delete this.ongoingSessions[sessionIdentifier];
