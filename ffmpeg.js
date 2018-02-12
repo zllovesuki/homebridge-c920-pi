@@ -239,7 +239,9 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                 var height = 720;
                 var fps = 30;
                 var bitrate = 300;
-                var aBitrate = 64;
+                var aBitrate = 32;
+                var aSample = 32000;
+                var aChannel = 2;
 
                 let videoInfo = request["video"];
                 if (videoInfo) {
@@ -257,6 +259,8 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                 let audioInfo = request.audio
                 if (audioInfo) {
                     aBitrate = audioInfo.max_bit_rate
+                    aSample = audioInfo.sample_rate
+                    aChannel = audioInfo.channel
                 }
                 console.log(videoInfo)
                 console.log(audioInfo)
@@ -271,14 +275,14 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                 let audioSsrc = sessionInfo.audio_ssrc;
 
                 let ffmpegCommand = '-thread_queue_size 512 ' + this.ffmpegSource + ' -map 0:0 -vcodec h264_omx -r ' +
-                    fps + ' -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' +
-                    bitrate + 'k -payload_type 99 -ssrc ' + videoSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
+                    fps + ' -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' + bitrate + 'k ' +
+                    '-payload_type 99 -ssrc ' + videoSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
                     videoKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetVideoPort + '?rtcpport=' + targetVideoPort +
-                    '&localrtcpport=' + targetVideoPort + '&pkt_size=1378 ' + 
-                    '-map 0:1 -acodec libfdk_aac -profile:a aac_eld -flags +global_header -f null -b:a 24k -r:a 16000 -bufsize 48k -ac 1 ' +
-                    '-payload_type 110 -ssrc ' + audioSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
-                    audioKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetAudioPort + '?rtcpport=' + targetAudioPort +
-                    '&localrtcpport=' + targetAudioPort;
+                    '&localrtcpport=' + targetVideoPort + '&pkt_size=1316 ' +
+                    '-map 0:1 -acodec libfdk_aac -profile:a aac_eld -flags +global_header -ab ' + aBitrate + 'k -ar ' + aSample + '000 '
+                    '-bufsize ' + aBitrate + 'k -ac ' + aChannel + ' -payload_type 110 -ssrc ' + audioSsrc + ' -f rtp -srtp_out_suite ' +
+                    'AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' + audioKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetAudioPort +
+                    '?rtcpport=' + targetAudioPort + '&localrtcpport=' + targetAudioPort+ '&pkt_size=1316';
 
                 console.log(ffmpegCommand)
                 let ffmpeg = spawn('ffmpeg', ffmpegCommand.split(' '), {
