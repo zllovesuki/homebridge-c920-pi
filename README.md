@@ -74,8 +74,8 @@ Or, refer to `snapshot.service` for systemd configuration
 
 In `videoConfig`, `source` has to be `-f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast`, and `stillImageSource` has to be `-i /dev/shm/latest.jpg`. Video codec is forced to be `h264_omx` so you don't need that configuration.
 
-## caveats
+## caveats/notes
 
 1. Using RTSP + h264_mmal will increase the time to initialize the stream. In my case it takes 15 seconds for the video to start playing (as opposed to almost instantly with direct access to `/dev/video0`). (However still image are fine since it is handled by a separate process.) I'm still trying to figure out the way.
-2. RTSP does complain with `max delay reached. need to consume packet`. *However this doesn't seem to affect the stream.* Still trying to investigate.
+2. RTSP does complain with `max delay reached. need to consume packet`. However this only happens upon initialization. There's no problem after the video/audio streams started.
 3. Depending on the movement of the stars, the direction of the wind, and the amount of water your drank, RTP might complained with `Non-monotonous DTS in output stream 1:0; previous: 605510, current: 559023; changing to 605510. This may result in incorrect timestamps in the output file`. *However this doesn't seem to affect the stream.* I'm still trying to investigate that.
