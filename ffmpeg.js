@@ -108,17 +108,14 @@ function FFMPEG(hap, cameraConfig) {
             }
         },
         audio: {
-            codecs: [{
-                    type: "OPUS", // Audio Codec
-                    samplerate: 24 // 8, 16, 24 KHz
+            codecs: [
+                {
+                    type: "AAC-eld",
+                    samplerate: 24
                 },
                 {
                     type: "AAC-eld",
                     samplerate: 16
-                },
-                {
-                    type: "AAC-eld",
-                    samplerate: 24
                 }
             ]
         }
