@@ -2,7 +2,7 @@
   "name": "homebridge-c920-pi",
   "version": "0.2.0",
   "description": "ffmpeg plugin for homebridge: https://github.com/nfarina/homebridge",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "homebridge-plugin"
   ],
