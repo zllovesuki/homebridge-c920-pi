@@ -57,7 +57,9 @@ However, if you only expect one stream at any given time, you can change it to 1
 
 ## setup: snapshot
 
-In the upstream, ffmpeg will take control of the device to snapshot and return a still image. However, see caveats below, it takes too long to get a still image. Thus, we will have a dedicated ffmpeg process to handle snapshotting for us.
+In the upstream, ffmpeg will take control of the device to snapshot and return a still image. However, that will take control of the device and it doesn't work like that. Since we are using streaming server, (see caveats below), it takes too long to get a still image. Thus, we will have a dedicated ffmpeg process to handle snapshotting for us.
+
+One advantage of such is that you are easily implement your favorite tools to save periodic images to your favorite storage (Minio, S3, FreeNAS, etc).
 
 ffmpeg: `ffmpeg -f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast -vf fps=fps=1/5 -f image2 -update 1 /dev/shm/latest.jpg`
 
