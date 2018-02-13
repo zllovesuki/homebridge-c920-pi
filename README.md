@@ -6,6 +6,8 @@ Refer to the [upstream](https://github.com/KhaosT/homebridge-camera-ffmpeg) for 
 
 Since multiple people are living in my house, I want the plugin to be able to handle multiple stream requests. Thus, we will have `v4l2rtspserver` grab the video feed, and stream it locally on RPi. Then, whenever users request for a live feed, it will request from the local live stream instead of taking control of the device.
 
+Or, in a simpler term, turning your USB Webcam into an IP Camera, and have fun with it. (Thus strictly speaking this will work with any other webcams that outputs H264 stream. MJPEG will work too but you will have to purchase the license for your RPi for the MPEG hardware decode.)
+
 ## configure your RPi
 
 Since we are going to use GPU decoding/encoding extensively, make sure to configure your RPi to have 256MB available to GPU.
