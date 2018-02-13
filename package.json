@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-c920-pi",
+  "name": "homebridge-camera-multistream",
   "version": "0.2.0",
   "description": "ffmpeg plugin for homebridge: https://github.com/nfarina/homebridge",
   "license": "Apache-2.0",
@@ -8,10 +8,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/zllovesuki/homebridge-c920-pi.git"
+    "url": "git://github.com/zllovesuki/homebridge-camera-multistream.git"
   },
   "bugs": {
-    "url": "http://github.com/zllovesuki/homebridge-c920-pi/issues"
+    "url": "http://github.com/zllovesuki/homebridge-camera-multistream/issues"
   },
   "engines": {
     "node": ">=5.0.0",

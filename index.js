@@ -7,10 +7,10 @@ module.exports = function(homebridge) {
   hap = homebridge.hap;
   UUIDGen = homebridge.hap.uuid;
 
-  homebridge.registerPlatform("homebridge-c920-pi", "C920", c920PiPlatform, true);
+  homebridge.registerPlatform("homebridge-camera-multistream", "camera-multistream", multiStreamPlatform, true);
 }
 
-function c920PiPlatform(log, config, api) {
+function multiStreamPlatform(log, config, api) {
   var self = this;
 
   self.log = log;
@@ -27,11 +27,11 @@ function c920PiPlatform(log, config, api) {
   }
 }
 
-c920PiPlatform.prototype.configureAccessory = function(accessory) {
+multiStreamPlatform.prototype.configureAccessory = function(accessory) {
   // Won't be invoked
 }
 
-c920PiPlatform.prototype.didFinishLaunching = function() {
+multiStreamPlatform.prototype.didFinishLaunching = function() {
   var self = this;
 
   if (self.config.cameras) {
@@ -54,6 +54,6 @@ c920PiPlatform.prototype.didFinishLaunching = function() {
       configuredAccessories.push(cameraAccessory);
     });
 
-    self.api.publishCameraAccessories("C920", configuredAccessories);
+    self.api.publishCameraAccessories("camera-multistream", configuredAccessories);
   }
 }
