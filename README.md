@@ -61,7 +61,7 @@ However, if you only expect one stream at any given time, you can change it to 1
 
 In the upstream, ffmpeg will take control of the device to snapshot and return a still image. However, that will take control of the device and it doesn't work like that. Since we are using streaming server, (see caveats below), it takes too long to get a still image. Thus, we will have a dedicated ffmpeg process to handle snapshotting for us.
 
-One advantage of such is that you are easily implement your favorite tools to save periodic images to your favorite storage (Minio, S3, FreeNAS, etc).
+One advantage of such is that you are easily implement your favorite tools to save periodic images to your favorite storage (Minio, S3, FreeNAS, etc). *Thus, thie plugin has no built-in "upload to Google Drive" function, unlike the upstream.*
 
 ffmpeg: `ffmpeg -f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast -vf fps=fps=1/5 -f image2 -update 1 /dev/shm/latest.jpg`
 
@@ -83,8 +83,6 @@ Or, refer to `snapshot.service` for systemd configuration
         {
             "name": "Garage",
             "videoConfig": {
-                "source": "-f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast",
-                "stillImageSource": "-i /dev/shm/latest.jpg",
                 "maxStreams": 2,
                 "maxWidth": 1280,
                 "maxHeight": 720,

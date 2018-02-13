@@ -5,7 +5,7 @@ var crypto = require('crypto');
 var fs = require('fs');
 var ip = require('ip');
 var spawn = require('child_process').spawn;
-var drive = require('./drive').drive;
+var sharp = require('sharp')
 
 module.exports = {
     FFMPEG: FFMPEG
@@ -20,23 +20,11 @@ function FFMPEG(hap, cameraConfig) {
     var ffmpegOpt = cameraConfig.videoConfig;
     this.name = cameraConfig.name;
 
-    if (!ffmpegOpt.source) {
-        throw new Error("Missing source for camera.");
-    }
-
-    this.ffmpegSource = ffmpegOpt.source;
-    this.ffmpegImageSource = ffmpegOpt.stillImageSource;
-
     this.services = [];
     this.streamControllers = [];
 
     this.pendingSessions = {};
     this.ongoingSessions = {};
-
-    this.uploader = cameraConfig.uploader || false;
-    if (this.uploader) {
-        this.drive = new drive();
-    }
 
     var numberOfStreams = ffmpegOpt.maxStreams || 2;
     var videoResolutions = [];
@@ -133,21 +121,14 @@ FFMPEG.prototype.handleCloseConnection = function(connectionID) {
 
 FFMPEG.prototype.handleSnapshotRequest = function(request, callback) {
     let resolution = request.width + 'x' + request.height;
-    var imageSource = this.ffmpegImageSource !== undefined ? this.ffmpegImageSource : this.ffmpegSource;
-    let ffmpeg = spawn('ffmpeg', (imageSource + ' -t 1 -s ' + resolution + ' -f image2 -').split(' '), {
-        env: process.env
-    });
-    var imageBuffer = Buffer(0);
-    console.log("Snapshot", imageSource + ' -t 1 -s ' + resolution + ' -f image2 -');
-    ffmpeg.stdout.on('data', function(data) {
-        imageBuffer = Buffer.concat([imageBuffer, data]);
-    });
-    ffmpeg.on('close', function(code) {
-        if (this.uploader) {
-            this.drive.storePicture(this.name, imageBuffer);
-        }
-        callback(undefined, imageBuffer);
-    }.bind(this));
+    var image = sharp('/dev/shm/latest.jpg')
+                .resize(request.width, request.height)
+                .jpeg()
+                .toBuffer(function(err, data, info) {
+                    if (err) return callback(err);
+                    console.log('Snapshot', info)
+                    callback(undefined, data)
+                })
 }
 
 FFMPEG.prototype.prepareStream = function(request, callback) {
@@ -273,8 +254,8 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                 let audioKey = sessionInfo.audio_srtp;
                 let audioSsrc = sessionInfo.audio_ssrc;
 
-                let ffmpegCommand = '-thread_queue_size 128 ' + this.ffmpegSource + ' -map 0:0 -vcodec h264_omx -r ' +
-                    fps + ' -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' + bitrate + 'k ' +
+                let ffmpegCommand = '-thread_queue_size 128 -f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast -map 0:0 ' +
+                    '-vcodec h264_omx -r ' + fps + ' -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' + bitrate + 'k ' +
                     '-payload_type 99 -ssrc ' + videoSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
                     videoKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetVideoPort + '?rtcpport=' + targetVideoPort +
                     '&localrtcpport=' + targetVideoPort + '&pkt_size=1316 ' +
