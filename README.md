@@ -1,4 +1,4 @@
-# homebridge-c920-pi
+# homebridge-camera-multistream
 
 Refer to the [upstream](https://github.com/KhaosT/homebridge-camera-ffmpeg) for original instructions. This plugin is specifically optimized for C920 running on Raspberry Pi 3 Model B, preferably Raspian Stretch Lite.
 
@@ -72,7 +72,24 @@ Or, refer to `snapshot.service` for systemd configuration
 
 ## configuration
 
-In `videoConfig`, `source` has to be `-f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast`, and `stillImageSource` has to be `-i /dev/shm/latest.jpg`. Video codec is forced to be `h264_omx` so you don't need that configuration.
+```json
+{
+    "platform": "camera-multistream",
+    "cameras": [
+        {
+            "name": "Garage",
+            "videoConfig": {
+                "source": "-f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast",
+                "stillImageSource": "-i /dev/shm/latest.jpg",
+                "maxStreams": 2,
+                "maxWidth": 1280,
+                "maxHeight": 720,
+                "maxFPS": 30
+            }
+        }
+    ]
+}
+```
 
 ## caveats/notes
 

@@ -115,6 +115,10 @@ function FFMPEG(hap, cameraConfig) {
                 {
                     type: "AAC-eld",
                     samplerate: 16
+                },
+                {
+                    type: "AAC-eld",
+                    samplerate: 24
                 }
             ]
         }
@@ -262,8 +266,6 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                     aSample = audioInfo.sample_rate
                     aChannel = audioInfo.channel
                 }
-                console.log(videoInfo)
-                console.log(audioInfo)
 
                 let targetAddress = sessionInfo["address"];
                 let targetVideoPort = sessionInfo["video_port"];
@@ -274,12 +276,12 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                 let audioKey = sessionInfo.audio_srtp;
                 let audioSsrc = sessionInfo.audio_ssrc;
 
-                let ffmpegCommand = '-thread_queue_size 512 ' + this.ffmpegSource + ' -map 0:0 -vcodec h264_omx -r ' +
+                let ffmpegCommand = '-thread_queue_size 128 ' + this.ffmpegSource + ' -map 0:0 -vcodec h264_omx -r ' +
                     fps + ' -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' + bitrate + 'k ' +
                     '-payload_type 99 -ssrc ' + videoSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
                     videoKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetVideoPort + '?rtcpport=' + targetVideoPort +
                     '&localrtcpport=' + targetVideoPort + '&pkt_size=1316 ' +
-                    '-map 0:1 -acodec libfdk_aac -profile:a aac_eld -flags +global_header -ab ' + aBitrate + 'k -ar ' + aSample + '000 ' + 
+                    '-map 0:1 -acodec libfdk_aac -profile:a aac_eld -flags +global_header -ab ' + aBitrate + 'k -ar ' + aSample + '000 ' +
                     '-bufsize ' + aBitrate + 'k -ac ' + aChannel + ' -payload_type 110 -ssrc ' + audioSsrc + ' -f rtp -srtp_out_suite ' +
                     'AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' + audioKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetAudioPort +
                     '?rtcpport=' + targetAudioPort + '&localrtcpport=' + targetAudioPort+ '&pkt_size=1316';
