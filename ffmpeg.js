@@ -121,14 +121,19 @@ FFMPEG.prototype.handleCloseConnection = function(connectionID) {
 
 FFMPEG.prototype.handleSnapshotRequest = function(request, callback) {
     let resolution = request.width + 'x' + request.height;
-    var image = sharp('/dev/shm/latest.jpg')
-                .resize(request.width, request.height)
-                .jpeg()
-                .toBuffer(function(err, data, info) {
-                    if (err) return callback(err);
-                    console.log('Snapshot', info)
-                    callback(undefined, data)
-                })
+    fs.readFile('/dev/shm/latest.jpg', function(err, imgBuffer) {
+        if (err) return callback(err)
+
+        sharp(imgBuffer)
+        .resize(request.width, request.height)
+        .jpeg()
+        .toBuffer(function(err, resized, info) {
+            if (err) return callback(err);
+            console.log('Snapshot', info)
+            callback(undefined, resized)
+        })
+    })
+
 }
 
 FFMPEG.prototype.prepareStream = function(request, callback) {
