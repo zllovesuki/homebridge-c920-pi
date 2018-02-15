@@ -259,7 +259,7 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                 let audioKey = sessionInfo.audio_srtp;
                 let audioSsrc = sessionInfo.audio_ssrc;
 
-                let ffmpegCommand = '-thread_queue_size 128 -f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast -map 0:0 ' +
+                let ffmpegCommand = '-thread_queue_size 128 -threads 0 -f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast -map 0:0 ' +
                     '-vcodec h264_omx -r ' + fps + ' -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' + bitrate + 'k ' +
                     '-payload_type 99 -ssrc ' + videoSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
                     videoKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetVideoPort + '?rtcpport=' + targetVideoPort +

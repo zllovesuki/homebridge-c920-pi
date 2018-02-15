@@ -8,7 +8,7 @@ Type=simple
 User=pi
 ExecStartPre=/bin/sleep 5
 ExecStartPre=-/bin/rm /dev/shm/latest.jpg
-ExecStart=/usr/local/bin/ffmpeg -f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast -vf fps=fps=1/5 -f image2 -update 1 /dev/shm/latest.jpg
+ExecStart=/usr/local/bin/ffmpeg -thread_queue_size 128 -threads 0 -f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast -vf fps=fps=1/5 -f image2 -update 1 /dev/shm/latest.jpg
 KillMode=process
 
 [Install]
