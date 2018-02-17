@@ -262,12 +262,11 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                 let ffmpegCommand = '-thread_queue_size 128 -threads 0 -f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast -map 0:0 ' +
                     '-vcodec h264_omx -r ' + fps + ' -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' + bitrate + 'k ' +
                     '-payload_type 99 -ssrc ' + videoSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
-                    videoKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetVideoPort + '?rtcpport=' + targetVideoPort +
-                    '&localrtcpport=' + targetVideoPort + '&pkt_size=1316 ' +
+                    videoKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetVideoPort + '?pkt_size=1316 ' +
                     '-map 0:1 -acodec libfdk_aac -profile:a aac_eld -flags +global_header -ab ' + aBitrate + 'k -ar ' + aSample + '000 ' +
                     '-bufsize ' + (aBitrate * 3) + 'k -ac ' + aChannel + ' -payload_type 110 -ssrc ' + audioSsrc + ' -f rtp -srtp_out_suite ' +
                     'AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' + audioKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetAudioPort +
-                    '?rtcpport=' + targetAudioPort + '&localrtcpport=' + targetAudioPort+ '&pkt_size=1316';
+                    '?pkt_size=1316';
 
                 console.log(ffmpegCommand)
                 let ffmpeg = spawn('ffmpeg', ffmpegCommand.split(' '), {
