@@ -278,7 +278,7 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
                     '&localrtcpport=' + targetVideoPort +
                     '&pkt_size=' + packetsize +
                     ' -map 0:1 -acodec libfdk_aac -profile:a aac_eld -flags +global_header -f null -b:a ' + abitrate + 'k -ar ' + asamplerate + 'k' +
-                    '-bufsize ' + abitrate + 'k -ac 1 -payload_type 110 -ssrc ' + audioSsrc + ' -f rtp -srtp_out_suite ' +
+                    ' -bufsize ' + abitrate + 'k -ac 1 -payload_type 110 -ssrc ' + audioSsrc + ' -f rtp -srtp_out_suite ' +
                     'AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' + audioKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetAudioPort +
                     '?rtcpport=' + targetAudioPort +
                     '&localrtcpport=' + targetAudioPort +
