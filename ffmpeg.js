@@ -11,43 +11,60 @@ module.exports = {
     FFMPEG: FFMPEG
 };
 
-function FFMPEG(hap, cameraConfig) {
-    uuid = hap.uuid;
-    Service = hap.Service;
-    Characteristic = hap.Characteristic;
-    StreamController = hap.StreamController;
+function FFMPEG(hap, cameraConfig, log, videoProcessor) {
+  uuid = hap.uuid;
+  Service = hap.Service;
+  Characteristic = hap.Characteristic;
+  StreamController = hap.StreamController;
+  this.log = log;
 
-    var ffmpegOpt = cameraConfig.videoConfig;
-    this.name = cameraConfig.name;
+  var ffmpegOpt = cameraConfig.videoConfig;
+  this.name = cameraConfig.name;
+  this.vcodec = ffmpegOpt.vcodec;
+  this.videoProcessor = videoProcessor || 'ffmpeg';
+  this.audio = ffmpegOpt.audio;
+  this.acodec = ffmpegOpt.acodec;
+  this.packetsize = ffmpegOpt.packetSize
+  this.fps = ffmpegOpt.maxFPS || 10;
+  this.maxBitrate = ffmpegOpt.maxBitrate || 300;
+  this.debug = ffmpegOpt.debug;
+  this.additionalCommandline = ffmpegOpt.additionalCommandline || '-tune zerolatency';
 
-    this.services = [];
-    this.streamControllers = [];
+  if (!ffmpegOpt.source) {
+    throw new Error("Missing source for camera.");
+  }
 
-    this.pendingSessions = {};
-    this.ongoingSessions = {};
+  this.ffmpegSource = ffmpegOpt.source;
+  this.ffmpegImageSource = ffmpegOpt.stillImageSource;
 
-    var numberOfStreams = ffmpegOpt.maxStreams || 2;
-    var videoResolutions = [];
+  this.services = [];
+  this.streamControllers = [];
 
-    this.maxWidth = ffmpegOpt.maxWidth;
-    this.maxHeight = ffmpegOpt.maxHeight;
-    var maxFPS = (ffmpegOpt.maxFPS > 30) ? 30 : ffmpegOpt.maxFPS;
+  this.pendingSessions = {};
+  this.ongoingSessions = {};
 
-    if (this.maxWidth >= 320) {
-        if (this.maxHeight >= 240) {
-            videoResolutions.push([320, 240, maxFPS]);
-            if (maxFPS > 15) {
-                videoResolutions.push([320, 240, 15]);
-            }
-        }
+  var numberOfStreams = ffmpegOpt.maxStreams || 2;
+  var videoResolutions = [];
 
-        if (this.maxHeight >= 180) {
-            videoResolutions.push([320, 180, maxFPS]);
-            if (maxFPS > 15) {
-                videoResolutions.push([320, 180, 15]);
-            }
-        }
+  this.maxWidth = ffmpegOpt.maxWidth || 1280;
+  this.maxHeight = ffmpegOpt.maxHeight || 720;
+  var maxFPS = (this.fps > 30) ? 30 : this.fps;
+
+  if (this.maxWidth >= 320) {
+    if (this.maxHeight >= 240) {
+      videoResolutions.push([320, 240, maxFPS]);
+      if (maxFPS > 15) {
+        videoResolutions.push([320, 240, 15]);
+      }
     }
+
+    if (this.maxHeight >= 180) {
+      videoResolutions.push([320, 180, maxFPS]);
+      if (maxFPS > 15) {
+        videoResolutions.push([320, 180, 15]);
+      }
+    }
+  }
 
     if (this.maxWidth >= 480) {
         if (this.maxHeight >= 360) {
@@ -85,27 +102,25 @@ function FFMPEG(hap, cameraConfig) {
         }
     }
 
-    let options = {
-        proxy: false, // Requires RTP/RTCP MUX Proxy
-        srtp: true, // Supports SRTP AES_CM_128_HMAC_SHA1_80 encryption
-        video: {
-            resolutions: videoResolutions,
-            codec: {
-                profiles: [0, 1, 2], // Enum, please refer StreamController.VideoCodecParamProfileIDTypes
-                levels: [0, 1, 2] // Enum, please refer StreamController.VideoCodecParamLevelTypes
-            }
+  let options = {
+    proxy: false, // Requires RTP/RTCP MUX Proxy
+    srtp: true, // Supports SRTP AES_CM_128_HMAC_SHA1_80 encryption
+    video: {
+      resolutions: videoResolutions,
+      codec: {
+        profiles: [0, 1, 2], // Enum, please refer StreamController.VideoCodecParamProfileIDTypes
+        levels: [0, 1, 2] // Enum, please refer StreamController.VideoCodecParamLevelTypes
+      }
+    },
+    audio: {
+      codecs: [
+        {
+          type: "OPUS", // Audio Codec
+          samplerate: 24 // 8, 16, 24 KHz
         },
-        audio: {
-            codecs: [
-                {
-                    type: "AAC-eld",
-                    samplerate: 24
-                },
-                {
-                    type: "AAC-eld",
-                    samplerate: 16
-                }
-            ]
+        {
+          type: "AAC-eld",
+          samplerate: 16
         }
     }
 
@@ -219,78 +234,144 @@ FFMPEG.prototype.handleStreamRequest = function(request) {
     if (sessionID) {
         let sessionIdentifier = uuid.unparse(sessionID);
 
-        if (requestType == "start") {
-            var sessionInfo = this.pendingSessions[sessionIdentifier];
-            if (sessionInfo) {
-                var width = 1280;
-                var height = 720;
-                var fps = 30;
-                var bitrate = 300;
-                var aBitrate = 32;
-                var aSample = 32000;
-                var aChannel = 2;
+    if (requestType == "start") {
+      var sessionInfo = this.pendingSessions[sessionIdentifier];
+      if (sessionInfo) {
+        var width = 1280;
+        var height = 720;
+        var fps = this.fps || 30;
+        var vbitrate = this.maxBitrate;
+        var abitrate = 32;
+        var asamplerate = 16;
+        var vcodec = this.vcodec || 'libx264';
+        var acodec = this.acodec || 'libfdk_aac';
+        var packetsize = this.packetsize || 1316; // 188 376
+        var additionalCommandline = this.additionalCommandline ;
 
-                let videoInfo = request["video"];
-                if (videoInfo) {
-                    width = videoInfo["width"];
-                    height = videoInfo["height"];
+        let videoInfo = request["video"];
+        if (videoInfo) {
+          width = videoInfo["width"];
+          height = videoInfo["height"];
 
-                    let expectedFPS = videoInfo["fps"];
-                    if (expectedFPS < fps) {
-                        fps = expectedFPS;
-                    }
-
-                    bitrate = videoInfo["max_bit_rate"];
-                }
-
-                let audioInfo = request.audio
-                if (audioInfo) {
-                    aBitrate = audioInfo.max_bit_rate
-                    aSample = audioInfo.sample_rate
-                    aChannel = audioInfo.channel
-                }
-
-                let targetAddress = sessionInfo["address"];
-                let targetVideoPort = sessionInfo["video_port"];
-                let videoKey = sessionInfo["video_srtp"];
-                let videoSsrc = sessionInfo["video_ssrc"];
-
-                let targetAudioPort = sessionInfo.audio_port
-                let audioKey = sessionInfo.audio_srtp;
-                let audioSsrc = sessionInfo.audio_ssrc;
-
-                let ffmpegCommand = '-thread_queue_size 128 -threads 0 -f rtsp -vcodec h264_mmal -i rtsp://127.0.0.1:8555/unicast -map 0:0 ' +
-                    '-vcodec h264_omx -r ' + fps + ' -vf scale=' + width + ':' + height + ' -b:v ' + bitrate + 'k -bufsize ' + bitrate + 'k ' +
-                    '-payload_type 99 -ssrc ' + videoSsrc + ' -f rtp -srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' +
-                    videoKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetVideoPort + '?pkt_size=1316 ' +
-                    '-map 0:1 -acodec libfdk_aac -profile:a aac_eld -flags +global_header -ab ' + aBitrate + 'k -ar ' + aSample + '000 ' +
-                    '-bufsize ' + (aBitrate * 3) + 'k -ac ' + aChannel + ' -payload_type 110 -ssrc ' + audioSsrc + ' -f rtp -srtp_out_suite ' +
-                    'AES_CM_128_HMAC_SHA1_80 -srtp_out_params ' + audioKey.toString('base64') + ' srtp://' + targetAddress + ':' + targetAudioPort +
-                    '?pkt_size=1316';
-
-                console.log(ffmpegCommand)
-                let ffmpeg = spawn('ffmpeg', ffmpegCommand.split(' '), {
-                    env: process.env
-                });
-                this.ongoingSessions[sessionIdentifier] = ffmpeg;
-            }
-
-            delete this.pendingSessions[sessionIdentifier];
-        } else if (requestType == "stop") {
-            var ffmpegProcess = this.ongoingSessions[sessionIdentifier];
-            if (ffmpegProcess) {
-                ffmpegProcess.kill('SIGKILL');
-            }
-
-            delete this.ongoingSessions[sessionIdentifier];
+          let expectedFPS = videoInfo["fps"];
+          if (expectedFPS < fps) {
+            fps = expectedFPS;
+          }
+          if(videoInfo["max_bit_rate"] < vbitrate) {
+            vbitrate = videoInfo["max_bit_rate"];
+          }
         }
+
+        let audioInfo = request["audio"];
+        if (audioInfo) {
+          abitrate = audioInfo["max_bit_rate"];
+          asamplerate = audioInfo["sample_rate"];
+        }
+
+        let targetAddress = sessionInfo["address"];
+        let targetVideoPort = sessionInfo["video_port"];
+        let videoKey = sessionInfo["video_srtp"];
+        let videoSsrc = sessionInfo["video_ssrc"];
+        let targetAudioPort = sessionInfo["audio_port"];
+        let audioKey = sessionInfo["audio_srtp"];
+        let audioSsrc = sessionInfo["audio_ssrc"];
+
+        let ffmpegCommand = this.ffmpegSource + ' -map 0:0' +
+          ' -vcodec ' + vcodec +
+          ' -pix_fmt yuv420p' +
+          ' -r ' + fps +
+          ' -f rawvideo' +
+          ' ' + additionalCommandline +
+          ' -vf scale=' + width + ':' + height +
+          ' -b:v ' + vbitrate + 'k' +
+          ' -bufsize ' + vbitrate+ 'k' +
+          ' -maxrate '+ vbitrate + 'k' +
+          ' -payload_type 99' +
+          ' -ssrc ' + videoSsrc +
+          ' -f rtp' +
+          ' -srtp_out_suite AES_CM_128_HMAC_SHA1_80' +
+          ' -srtp_out_params ' + videoKey.toString('base64') +
+          ' srtp://' + targetAddress + ':' + targetVideoPort +
+          '?rtcpport=' + targetVideoPort +
+          '&localrtcpport=' + targetVideoPort +
+          '&pkt_size=' + packetsize;
+
+        if(this.audio){
+          ffmpegCommand+= ' -map 0:1' +
+            ' -acodec ' + acodec +
+            ' -profile:a aac_eld' +
+            ' -flags +global_header' +
+            ' -f null' +
+            ' -ar ' + asamplerate + 'k' +
+            ' -b:a ' + abitrate + 'k' +
+            ' -bufsize ' + abitrate + 'k' +
+            ' -ac 1' +
+            ' -payload_type 110' +
+            ' -ssrc ' + audioSsrc +
+            ' -f rtp' +
+            ' -srtp_out_suite AES_CM_128_HMAC_SHA1_80' +
+            ' -srtp_out_params ' + audioKey.toString('base64') +
+            ' srtp://' + targetAddress + ':' + targetAudioPort +
+            '?rtcpport=' + targetAudioPort +
+            '&localrtcpport=' + targetAudioPort +
+            '&pkt_size=' + packetsize;
+        }
+
+        let ffmpeg = spawn(this.videoProcessor, ffmpegCommand.split(' '), {env: process.env});
+        this.log("Start streaming video from " + this.name + " with " + width + "x" + height + "@" + vbitrate + "kBit");
+        if(this.debug){
+          console.log("ffmpeg " + ffmpegCommand);
+        }
+
+        // Always setup hook on stderr.
+        // Without this streaming stops within one to two minutes.
+        ffmpeg.stderr.on('data', function(data) {
+          // Do not log to the console if debugging is turned off
+          if(this.debug){
+            console.log(data.toString());
+          }
+        }.bind(this));
+        let self = this;
+        ffmpeg.on('error', function(error){
+            self.log("An error occurs while making stream request");
+            self.debug ? self.log(error) : null;
+        });
+        ffmpeg.on('close', (code) => {
+          if(code == null || code == 0 || code == 255){
+            self.log("Stopped streaming");
+          } else {
+            self.log("ERROR: FFmpeg exited with code " + code);
+            for(var i=0; i < self.streamControllers.length; i++){
+              var controller = self.streamControllers[i];
+              if(controller.sessionIdentifier === sessionID){
+                controller.forceStop();
+              }
+            }
+          }
+        });
+        this.ongoingSessions[sessionIdentifier] = ffmpeg;
+      }
+
+      delete this.pendingSessions[sessionIdentifier];
+    } else if (requestType == "stop") {
+      var ffmpegProcess = this.ongoingSessions[sessionIdentifier];
+      if (ffmpegProcess) {
+        ffmpegProcess.kill('SIGTERM');
+      }
+      delete this.ongoingSessions[sessionIdentifier];
     }
+  }
 }
 
 FFMPEG.prototype.createCameraControlService = function() {
-    var controlService = new Service.CameraControl();
+  var controlService = new Service.CameraControl();
 
-    this.services.push(controlService);
+  this.services.push(controlService);
+
+  if(this.audio){
+    var microphoneService = new Service.Microphone();
+    this.services.push(microphoneService);
+  }
 }
 
 // Private
