@@ -33,6 +33,7 @@ multiStreamPlatform.prototype.configureAccessory = function(accessory) {
 
 multiStreamPlatform.prototype.didFinishLaunching = function() {
   var self = this;
+  var videoProcessor = self.config.videoProcessor || 'ffmpeg';
 
   if (self.config.cameras) {
     var configuredAccessories = [];
