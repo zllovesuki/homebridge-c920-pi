@@ -30,13 +30,6 @@ function FFMPEG(hap, cameraConfig, log, videoProcessor) {
     this.debug = ffmpegOpt.debug;
     this.additionalCommandline = ffmpegOpt.additionalCommandline || '-tune zerolatency';
 
-    if (!ffmpegOpt.source) {
-        throw new Error("Missing source for camera.");
-    }
-
-    this.ffmpegSource = ffmpegOpt.source;
-    this.ffmpegImageSource = ffmpegOpt.stillImageSource;
-
     this.services = [];
     this.streamControllers = [];
 
